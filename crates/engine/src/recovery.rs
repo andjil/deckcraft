@@ -44,7 +44,13 @@ pub fn instance_id() -> u64 {
     *ID.get_or_init(|| {
         use std::hash::{BuildHasher, Hasher};
         let mut h = std::collections::hash_map::RandomState::new().build_hasher();
+        // xrm: the browser has no processes (`std::process::id()` panics on wasm32 with "no pids on
+        // this platform", which killed the web app the moment it minted its first document uid);
+        // one editor per page, so a fixed word is as good as a pid there.
+        #[cfg(not(target_arch = "wasm32"))]
         h.write_u32(std::process::id());
+        #[cfg(target_arch = "wasm32")]
+        h.write_u32(0x7761_736d);
         #[cfg(not(target_arch = "wasm32"))]
         if let Ok(d) = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH) {
             h.write_u128(d.as_nanos());
